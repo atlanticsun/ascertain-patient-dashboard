@@ -43,7 +43,7 @@ export default function PatientList() {
 
   const { data, isLoading, isFetching, isError, refetch } = usePatients({
     page,
-    page_size: 10,
+    page_size: 20,
     q: debouncedSearch || undefined,
     status: statusFilter || undefined,
     sort_by: sortBy,
