@@ -15,7 +15,7 @@ web (nginx serving the React build)  -->  api (FastAPI on uvicorn)  -->  db (Pos
 
 The frontend talks to the API over HTTP with JSON. The API owns all validation
 and persistence. Postgres holds the patients and notes tables. On first startup
-the API seeds 20 sample patients (with notes on 10 of them) when the patients
+the API tops the table up to 120 sample patients (with notes on many of them) when the patients
 table is empty.
 
 ## Tech choices and why

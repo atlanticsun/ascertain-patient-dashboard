@@ -1,15 +1,19 @@
 """Seed the database with realistic sample patients and clinical notes.
 
 Run directly with ``python seed.py`` or let the API call ``seed_database``
-on startup when the patients table is empty.
+on startup when the patients table holds fewer than TARGET_PATIENTS rows.
 """
 import random
 from datetime import date, datetime, timedelta
+
+from sqlalchemy import func, select
 
 from app import models
 from app.database import SessionLocal
 
 random.seed(42)
+
+TARGET_PATIENTS = 120
 
 # Each entry: first, last, dob, email, phone, address, blood, status,
 # allergies, conditions.
@@ -118,34 +122,132 @@ NOTES = {
 
 
 def seed_database(db) -> int:
-    """Insert the sample patients and notes. Returns the patient count added."""
+    """Top the patients table up to TARGET_PATIENTS rows. Returns rows added."""
+    existing = db.scalar(select(func.count()).select_from(models.Patient)) or 0
     added = 0
-    for entry in PATIENTS:
-        patient = models.Patient(
-            first_name=entry[0],
-            last_name=entry[1],
-            date_of_birth=entry[2],
-            email=entry[3],
-            phone=entry[4],
-            address=entry[5],
-            blood_type=entry[6],
-            status=entry[7],
-            allergies=entry[8],
-            conditions=entry[9],
-        )
+
+    if existing == 0:
+        for index, entry in enumerate(PATIENTS):
+            patient = models.Patient(
+                first_name=entry[0],
+                last_name=entry[1],
+                date_of_birth=entry[2],
+                email=entry[3],
+                phone=entry[4],
+                address=entry[5],
+                blood_type=entry[6],
+                status=entry[7],
+                allergies=entry[8],
+                conditions=entry[9],
+            )
+            db.add(patient)
+            db.flush()  # assign the id so notes can reference it
+            added += 1
+            for days_ago, content in NOTES.get(index, []):
+                db.add(
+                    models.Note(
+                        patient_id=patient.id,
+                        content=content,
+                        created_at=datetime.now() - timedelta(days=days_ago),
+                    )
+                )
+        existing += added
+
+    generated = _generated_patients(TARGET_PATIENTS - existing)
+    for entry in generated:
+        patient = models.Patient(**entry)
         db.add(patient)
-        db.flush()  # assign the id so notes can reference it
+        db.flush()
         added += 1
-        for days_ago, content in NOTES.get(PATIENTS.index(entry), []):
+        if random.random() < 0.35:
+            note_days = random.randint(2, 120)
             db.add(
                 models.Note(
                     patient_id=patient.id,
-                    content=content,
-                    created_at=datetime.now() - timedelta(days=days_ago),
+                    content=random.choice(GENERATED_NOTES),
+                    created_at=datetime.now() - timedelta(days=note_days),
                 )
             )
     db.commit()
     return added
+
+
+FIRST_NAMES = [
+    "Maria", "James", "Priya", "Robert", "Elena", "David", "Sarah", "Michael",
+    "Aisha", "William", "Olivia", "Daniel", "Fatima", "Thomas", "Grace",
+    "Kevin", "Nina", "Carlos", "Hannah", "George", "Liam", "Emma", "Noah",
+    "Ava", "Ethan", "Sophia", "Mason", "Isabella", "Lucas", "Mia",
+]
+
+LAST_NAMES = [
+    "Santos", "Carter", "Nair", "Kim", "Rodriguez", "Okafor", "Mitchell",
+    "Thompson", "Khan", "Chen", "Brown", "Garcia", "Hassan", "Anderson",
+    "Liu", "Murphy", "Petrov", "Mendez", "Patel", "Nguyen", "Silva",
+    "Kowalski", "Rossi", "Dubois", "Yamamoto", "Osei", "Larsen", "Ali",
+    "Novak", "Reyes",
+]
+
+STREETS = [
+    "Beacon St", "Tremont St", "Marlborough St", "Commonwealth Ave",
+    "W Cedar St", "Berkeley St", "Myrtle St", "Joy St", "Mt Vernon St",
+    "Hancock St", "Phillips St", "Revere St", "Grove St", "Irving St",
+    "Anderson St", "Pinckney St", "Louisburg Sq", "Whittier Pl",
+    "Spruce St", "Newbury St",
+]
+
+BLOOD_TYPES = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"]
+
+CONDITIONS = [
+    "Hypertension", "Type 2 diabetes", "Asthma", "High cholesterol",
+    "Hypothyroidism", "Migraine", "Osteoarthritis", "Anxiety", "Eczema",
+    "Gout", "None", "COPD", "Atrial fibrillation", "Lower back pain, chronic",
+    "Rheumatoid arthritis", "Congestive heart failure",
+]
+
+ALLERGIES = [
+    "Penicillin", "Sulfa drugs", "Latex", "Peanuts", "Shellfish", "Aspirin",
+    "Codeine", "Ibuprofen", "None",
+]
+
+GENERATED_NOTES = [
+    "Routine follow up. Vitals stable, no new complaints. Continue current plan.",
+    "Lab results reviewed with patient. Values within target range.",
+    "Patient reports feeling well. Refills sent to pharmacy.",
+    "Discussed lifestyle changes. Patient receptive, will recheck in 3 months.",
+    "Mild symptoms reported. Adjusted dosage, scheduled follow up in 2 weeks.",
+]
+
+
+def _generated_patients(count: int) -> list:
+    """Build deterministic realistic patient dicts to reach the target count."""
+    patients = []
+    for i in range(count):
+        first = random.choice(FIRST_NAMES)
+        last = random.choice(LAST_NAMES)
+        dob = date(
+            random.randint(1940, 2005),
+            random.randint(1, 12),
+            random.randint(1, 28),
+        )
+        status = random.choices(
+            ["active", "active", "active", "inactive", "critical"],
+            k=1,
+        )[0]
+        patients.append(
+            {
+                "first_name": first,
+                "last_name": last,
+                "date_of_birth": dob,
+                "email": f"{first.lower()}.{last.lower()}{i}@example.com",
+                "phone": f"({random.choice(['617', '857'])}) 555-{random.randint(100, 999):03d}{random.randint(0, 9)}",
+                "address": f"{random.randint(1, 200)} {random.choice(STREETS)}, Boston, MA 0211{random.randint(0, 9)}",
+                "blood_type": random.choice(BLOOD_TYPES),
+                "status": status,
+                "allergies": random.choice(ALLERGIES),
+                "conditions": random.choice(CONDITIONS),
+            }
+        )
+    return patients
 
 
 if __name__ == "__main__":

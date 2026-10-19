@@ -23,16 +23,16 @@ async def lifespan(app: FastAPI):
 
     Migrations own the schema, so this only fills data and never creates tables.
     """
-    from seed import seed_database
+    from seed import TARGET_PATIENTS, seed_database
 
     db = SessionLocal()
     try:
         tables = inspect(engine).get_table_names()
         if "patients" in tables:
             count = db.scalar(select(func.count()).select_from(models.Patient)) or 0
-            if count == 0:
-                seed_database(db)
-                logger.info("Seeded the database with sample patients")
+            if count < TARGET_PATIENTS:
+                added = seed_database(db)
+                logger.info("Seeded %d patients, table now holds the target", added)
     except Exception:
         logger.exception("Startup seed check failed, continuing without seeding")
     finally:
