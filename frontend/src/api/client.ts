@@ -11,7 +11,7 @@ export interface Patient {
   phone: string;
   address: string;
   blood_type: string;
-  status: "active" | "inactive" | "critical";
+  status: 'active' | 'inactive' | 'critical';
   allergies: string;
   conditions: string;
   age: number;
@@ -53,10 +53,10 @@ export interface PatientQuery {
   q?: string;
   status?: string;
   sort_by?: string;
-  sort_dir?: "asc" | "desc";
+  sort_dir?: 'asc' | 'desc';
 }
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
 
 /** Error thrown for failed API calls. status 0 means the network itself failed. */
 export class ApiError extends Error {
@@ -74,11 +74,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
-      headers: { "Content-Type": "application/json" },
+      headers: { 'Content-Type': 'application/json' },
       ...init,
     });
   } catch {
-    throw new ApiError(0, "Could not reach the API. Check that the backend is running.");
+    throw new ApiError(0, 'Could not reach the API. Check that the backend is running.');
   }
 
   if (res.status === 204) {
@@ -95,15 +95,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (Array.isArray(detail)) {
       for (const err of detail as Array<{ loc?: unknown[]; msg?: string }>) {
         const loc = err.loc ?? [];
-        const name = String(loc[loc.length - 1] ?? "form");
+        const name = String(loc[loc.length - 1] ?? 'form');
         if (!fields[name]) {
           fields[name] = [];
         }
-        fields[name].push(err.msg ?? "Invalid value");
+        fields[name].push(err.msg ?? 'Invalid value');
       }
     }
     const message =
-      typeof detail === "string" ? detail : `Request failed with status ${res.status}`;
+      typeof detail === 'string' ? detail : `Request failed with status ${res.status}`;
     throw new ApiError(res.status, message, fields);
   }
 
@@ -113,33 +113,35 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 function toQuery(params: PatientQuery): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== "") {
+    if (value !== undefined && value !== '') {
       search.set(key, String(value));
     }
   }
   const text = search.toString();
-  return text ? `?${text}` : "";
+  return text ? `?${text}` : '';
+}
+
+export interface PatientStats {
+  total: number;
+  by_status: Record<string, number>;
 }
 
 export const api = {
-  listPatients: (params: PatientQuery) =>
-    request<PatientPage>(`/patients${toQuery(params)}`),
+  listPatients: (params: PatientQuery) => request<PatientPage>(`/patients${toQuery(params)}`),
+  getPatientStats: () => request<PatientStats>(`/patients/stats`),
   getPatient: (id: string) => request<Patient>(`/patients/${id}`),
   createPatient: (data: PatientInput) =>
-    request<Patient>(`/patients`, { method: "POST", body: JSON.stringify(data) }),
+    request<Patient>(`/patients`, { method: 'POST', body: JSON.stringify(data) }),
   updatePatient: (id: string, data: Partial<PatientInput>) =>
-    request<Patient>(`/patients/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-  deletePatient: (id: string) =>
-    request<void>(`/patients/${id}`, { method: "DELETE" }),
-  listNotes: (patientId: string) =>
-    request<Note[]>(`/patients/${patientId}/notes`),
+    request<Patient>(`/patients/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deletePatient: (id: string) => request<void>(`/patients/${id}`, { method: 'DELETE' }),
+  listNotes: (patientId: string) => request<Note[]>(`/patients/${patientId}/notes`),
   createNote: (patientId: string, content: string) =>
     request<Note>(`/patients/${patientId}/notes`, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify({ content }),
     }),
   deleteNote: (patientId: string, noteId: string) =>
-    request<void>(`/patients/${patientId}/notes/${noteId}`, { method: "DELETE" }),
-  getSummary: (patientId: string) =>
-    request<{ summary: string }>(`/patients/${patientId}/summary`),
+    request<void>(`/patients/${patientId}/notes/${noteId}`, { method: 'DELETE' }),
+  getSummary: (patientId: string) => request<{ summary: string }>(`/patients/${patientId}/summary`),
 };

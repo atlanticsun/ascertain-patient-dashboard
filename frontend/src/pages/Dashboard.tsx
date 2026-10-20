@@ -1,79 +1,98 @@
-import { Link } from "react-router-dom";
-import { usePatients } from "../api/hooks";
-import ErrorBanner from "../components/ErrorBanner";
+import { Link } from 'react-router-dom';
+import { usePatientStats } from '../api/hooks';
+import ErrorBanner from '../components/ErrorBanner';
+import StatusPieChart from '../components/StatusPieChart';
 
-const STATUS_ORDER = ["active", "inactive", "critical"] as const;
-const BAR_COLORS: Record<string, string> = {
-  active: "bg-green-500",
-  inactive: "bg-slate-400",
-  critical: "bg-red-500",
+const STATUS_ORDER = ['active', 'inactive', 'critical'] as const;
+/* Slice colors follow the calming clinical palette: dusty teal for active,
+   warm gray for inactive, softened clay for critical (urgent without the
+   overstimulation of alarm red). */
+const SLICE_COLORS: Record<(typeof STATUS_ORDER)[number], string> = {
+  active: '#2F7E8F',
+  inactive: '#9AA3A8',
+  critical: '#C26D5B',
 };
 
-/* Home page: a simple overview of patient counts by status, rendered as CSS
-   bars. No chart library needed for three numbers. */
+function PlusIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+    >
+      <path d="M7 2v10M2 7h10" />
+    </svg>
+  );
+}
+
+/* Home page: key counts up top, then an interactive donut chart of patients
+   by status. Clicking a slice (or a stat card) opens the patient list
+   filtered to that status. */
 export default function Dashboard() {
-  const { data, isLoading, isError, refetch } = usePatients({ page: 1, page_size: 100 });
+  const { data, isLoading, isError, refetch } = usePatientStats();
 
   if (isLoading) {
-    return <p className="text-slate-500">Loading overview…</p>;
+    return <p className="text-ink-500">Loading overview…</p>;
   }
   if (isError || !data) {
     return <ErrorBanner message="Could not load the dashboard." onRetry={() => refetch()} />;
   }
 
-  const counts: Record<string, number> = { active: 0, inactive: 0, critical: 0 };
-  for (const p of data.items) {
-    if (p.status in counts) {
-      counts[p.status] += 1;
-    }
-  }
-  const max = Math.max(1, ...Object.values(counts));
+  const counts: Record<string, number> = {
+    active: data.by_status.active ?? 0,
+    inactive: data.by_status.inactive ?? 0,
+    critical: data.by_status.critical ?? 0,
+  };
+  const slices = STATUS_ORDER.map((s) => ({
+    status: s,
+    count: counts[s],
+    color: SLICE_COLORS[s],
+  }));
 
   return (
-    <div>
+    <div className="page-in">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <Link
-          to="/patients/new"
-          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          + New patient
+        <div>
+          <h1 className="text-2xl font-bold text-ink-900">Dashboard</h1>
+          <p className="mt-1 text-sm text-ink-500">
+            An overview of your patient population. Select a slice or status to filter the list.
+          </p>
+        </div>
+        <Link to="/patients/new" className="btn-primary">
+          <PlusIcon />
+          New patient
         </Link>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded bg-white p-4 shadow-sm">
-          <p className="text-sm text-slate-500">Total patients</p>
-          <p className="text-3xl font-bold">{data.total}</p>
-        </div>
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Link to="/patients" className="stat-card">
+          <p className="text-sm text-ink-500">Total patients</p>
+          <p className="mt-1 text-3xl font-bold text-ink-900">{data.total}</p>
+        </Link>
         {STATUS_ORDER.map((s) => (
-          <Link
-            key={s}
-            to="/patients"
-            className="rounded bg-white p-4 shadow-sm hover:shadow"
-          >
-            <p className="text-sm capitalize text-slate-500">{s}</p>
-            <p className="text-3xl font-bold">{counts[s]}</p>
+          <Link key={s} to={`/patients?status=${s}`} className="stat-card">
+            <p className="flex items-center gap-2 text-sm capitalize text-ink-500">
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: SLICE_COLORS[s] }}
+              />
+              {s}
+            </p>
+            <p className="mt-1 text-3xl font-bold text-ink-900">{counts[s]}</p>
           </Link>
         ))}
       </div>
 
-      <div className="rounded bg-white p-4 shadow-sm">
-        <h2 className="mb-4 font-semibold">Patients by status</h2>
-        <div className="flex flex-col gap-3">
-          {STATUS_ORDER.map((s) => (
-            <div key={s} className="flex items-center gap-3">
-              <span className="w-20 text-sm capitalize text-slate-600">{s}</span>
-              <div className="h-4 flex-1 overflow-hidden rounded bg-slate-200">
-                <div
-                  className={`h-full rounded ${BAR_COLORS[s]}`}
-                  style={{ width: `${(counts[s] / max) * 100}%` }}
-                />
-              </div>
-              <span className="w-10 text-right text-sm font-medium">{counts[s]}</span>
-            </div>
-          ))}
-        </div>
+      <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-mist-200">
+        <h2 className="mb-1 font-semibold text-ink-900">Patients by status</h2>
+        <p className="mb-6 text-sm text-ink-500">
+          Hover a slice for detail, click it to filter the patient list.
+        </p>
+        <StatusPieChart slices={slices} total={data.total} />
       </div>
     </div>
   );

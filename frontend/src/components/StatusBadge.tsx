@@ -1,11 +1,11 @@
 const STYLES: Record<string, string> = {
-  active: "bg-green-100 text-green-800",
-  inactive: "bg-slate-200 text-slate-700",
-  critical: "bg-red-100 text-red-800",
+  active: 'bg-teal-100 text-teal-700',
+  inactive: 'bg-stone-100 text-ink-500',
+  critical: 'bg-clay-100 text-clay-600',
 };
 
 export default function StatusBadge({ status }: { status: string }) {
-  const style = STYLES[status] ?? "bg-slate-200 text-slate-700";
+  const style = STYLES[status] ?? 'bg-stone-100 text-ink-500';
   return (
     <span
       className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${style}`}

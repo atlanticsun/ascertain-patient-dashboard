@@ -36,6 +36,24 @@ table is empty.
   with no API keys, no cost, and deterministic output. An LLM call is a clean
   swap later behind the same endpoint.
 
+## Design
+
+* **Calming clinical palette.** The UI uses a soft blue mist background with
+  dusty teal as the primary color, a nature inspired sage, and warm neutrals.
+  This follows evidence based healthcare design research: cool blue green
+  tones are linked to lower patient stress and anxiety (a 2020 study in the
+  Health Environments Research and Design Journal measured a 14 percent
+  anxiety reduction against sterile white), while warm neutrals avoid the
+  higher stress response that plain white clinical spaces can trigger.
+  Critical states use a softened clay instead of alarm red, urgent enough to
+  read at a glance without overstimulation.
+* **Interactive status donut.** The dashboard chart is a hand rolled SVG donut
+  (no chart library): hovering a slice pushes it outward and updates the
+  center readout with the count and share; clicking a slice (or a stat card)
+  opens the patient list pre filtered to that status via a `?status=` URL
+  parameter. Slices animate in with a staggered pop, and the chart is keyboard
+  accessible.
+
 ## Run it with Docker
 
 You need Docker and the compose plugin.

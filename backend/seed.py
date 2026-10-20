@@ -128,6 +128,8 @@ def seed_database(db) -> int:
 
     if existing == 0:
         for index, entry in enumerate(PATIENTS):
+            last_visit = datetime.now() - timedelta(days=random.randint(0, 365))
+            first_seen = last_visit - timedelta(days=random.randint(30, 1200))
             patient = models.Patient(
                 first_name=entry[0],
                 last_name=entry[1],
@@ -139,6 +141,8 @@ def seed_database(db) -> int:
                 status=entry[7],
                 allergies=entry[8],
                 conditions=entry[9],
+                created_at=first_seen,
+                updated_at=last_visit,
             )
             db.add(patient)
             db.flush()  # assign the id so notes can reference it
@@ -233,6 +237,8 @@ def _generated_patients(count: int) -> list:
             ["active", "active", "active", "inactive", "critical"],
             k=1,
         )[0]
+        last_visit = datetime.now() - timedelta(days=random.randint(0, 365))
+        first_seen = last_visit - timedelta(days=random.randint(30, 1200))
         patients.append(
             {
                 "first_name": first,
@@ -245,6 +251,8 @@ def _generated_patients(count: int) -> list:
                 "status": status,
                 "allergies": random.choice(ALLERGIES),
                 "conditions": random.choice(CONDITIONS),
+                "created_at": first_seen,
+                "updated_at": last_visit,
             }
         )
     return patients

@@ -15,7 +15,7 @@ from app.database import get_db
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 
-SORTABLE = {"name", "age", "last_visit", "created_at"}
+SORTABLE = {"name", "age", "last_visit", "created_at", "status", "blood_type"}
 
 
 def _get_patient_or_404(patient_id: uuid.UUID, db: Session) -> models.Patient:
@@ -38,6 +38,10 @@ def _apply_sort(stmt, sort_by: str, sort_dir: str):
         sort_dir = "desc" if sort_dir == "asc" else "asc"
     elif sort_by == "last_visit":
         columns = (models.Patient.updated_at,)
+    elif sort_by == "status":
+        columns = (models.Patient.status,)
+    elif sort_by == "blood_type":
+        columns = (models.Patient.blood_type,)
     else:
         columns = (models.Patient.created_at,)
     ordered = [c.desc() if sort_dir == "desc" else c.asc() for c in columns]
@@ -50,7 +54,7 @@ def list_patients(
     page_size: int = Query(20, ge=1, le=100, description="Items per page, max 100"),
     q: str | None = Query(None, description="Search first and last name"),
     status: str | None = Query(None, description="Filter by patient status"),
-    sort_by: str = Query("name", description="One of name, age, last_visit, created_at"),
+    sort_by: str = Query("name", description="One of name, age, last_visit, created_at, status, blood_type"),
     sort_dir: str = Query("asc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
 ):
@@ -104,6 +108,18 @@ def create_patient(payload: schemas.PatientCreate, db: Session = Depends(get_db)
     db.commit()
     db.refresh(patient)
     return patient
+
+
+@router.get("/stats")
+def patient_stats(db: Session = Depends(get_db)):
+    """Aggregate counts for the dashboard donut. A dedicated endpoint avoids
+    paging through patients just to count them, so the chart always covers
+    the full population and the ring always closes."""
+    rows = db.query(models.Patient.status, func.count()).group_by(
+        models.Patient.status
+    ).all()
+    by_status = {status: count for status, count in rows}
+    return {"total": sum(by_status.values()), "by_status": by_status}
 
 
 @router.get("/{patient_id}", response_model=schemas.PatientRead)

@@ -1,11 +1,11 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import Layout from "./components/Layout";
-import Dashboard from "./pages/Dashboard";
-import PatientList from "./pages/PatientList";
-import PatientForm from "./pages/PatientForm";
-import PatientDetail from "./pages/PatientDetail";
-import NotFound from "./pages/NotFound";
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
+import PatientList from './pages/PatientList';
+import PatientForm from './pages/PatientForm';
+import PatientDetail from './pages/PatientDetail';
+import NotFound from './pages/NotFound';
 
 // One shared client. Defaults keep it simple: a couple of retries are off so
 // form errors surface immediately instead of looking like hangs.

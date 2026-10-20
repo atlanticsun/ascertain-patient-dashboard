@@ -6,12 +6,12 @@ interface Props {
 /* Visible banner for failed loads, with an optional retry action. */
 export default function ErrorBanner({ message, onRetry }: Props) {
   return (
-    <div className="mb-4 flex items-center justify-between gap-4 rounded border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+    <div className="mb-4 flex items-center justify-between gap-4 rounded border border-clay-500/30 bg-clay-100 px-4 py-3 text-sm text-clay-600">
       <span>{message}</span>
       {onRetry && (
         <button
           onClick={onRetry}
-          className="shrink-0 rounded bg-red-600 px-3 py-1.5 font-medium text-white hover:bg-red-700"
+          className="btn-primary shrink-0 !bg-clay-500 px-3 py-1.5 hover:!bg-clay-600"
         >
           Retry
         </button>
