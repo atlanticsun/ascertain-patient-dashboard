@@ -7,7 +7,7 @@ import math
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app import models, schemas, summary
@@ -74,11 +74,26 @@ def list_patients(
     count_stmt = select(func.count()).select_from(models.Patient)
 
     if q:
-        like = f"%{q.strip()}%"
-        condition = or_(
-            models.Patient.first_name.ilike(like),
-            models.Patient.last_name.ilike(like),
-        )
+        # Split "john smith" into tokens so each word can match either name
+        # column. Without this, typing a space after the first name would
+        # match nothing, since no single column holds the full string.
+        # LIKE wildcards in the input are escaped so they match literally.
+        def _like(token: str) -> str:
+            escaped = (
+                token.replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_")
+            )
+            return f"%{escaped}%"
+
+        token_filters = [
+            or_(
+                models.Patient.first_name.ilike(_like(token), escape="\\"),
+                models.Patient.last_name.ilike(_like(token), escape="\\"),
+            )
+            for token in q.strip().split()
+        ]
+        condition = and_(*token_filters)
         stmt = stmt.where(condition)
         count_stmt = count_stmt.where(condition)
     if status:
