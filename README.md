@@ -101,6 +101,7 @@ Open http://localhost:5173.
 | ------ | ---- | ----------- |
 | GET | /health | Health check, returns `{"status": "ok"}` |
 | GET | /patients | List with `page`, `page_size` (max 100), `q` search, `status` filter, `sort_by`, `sort_dir` |
+| GET | /patients/stats | Total plus per status counts for the dashboard chart |
 | POST | /patients | Create a patient, returns 201 |
 | GET | /patients/{id} | One patient, 404 when unknown |
 | PUT | /patients/{id} | Update any subset of fields |
